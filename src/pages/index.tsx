@@ -1,10 +1,13 @@
 import Head from "next/head";
+import Image from "next/image";
 import { SignInButton, SignOutButton, useUser } from "@clerk/nextjs";
 
-import { RouterOutputs, api } from "~/utils/api"
+import { api } from "~/utils/api"
+import type { RouterOutputs } from "~/utils/api"
 
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
+import { LoadingPage } from "~/components/loading";
 dayjs.extend(relativeTime);
 
 const CreatePostWizard = () => {
@@ -12,7 +15,7 @@ const CreatePostWizard = () => {
   if (!user) return null;
 
   return <div className="flex gap-4 w-full">
-    <img src={user.profileImageUrl} alt="Profile Image" className="w-16 h-16 rounded-full" />
+    <Image src={user.profileImageUrl} alt="Profile Image" className="w-16 h-16 rounded-full" width={56} height={56} />
     <input className="bg-transparent grow outline-none" placeholder="Type your message..." />
   </div>
 }
@@ -23,7 +26,7 @@ const PostView = (props: PostWithUser) => {
   const { post, author } = props;
   return (
     <div className="flex p-4 border-b border-slate-400 gap-4" key={post.id}>
-      <img className="w-16 h-16 rounded-full" src={author?.profilePicture} />
+      <Image className="w-16 h-16 rounded-full" src={author?.profilePicture} alt={`@${author.name}'s profile picture`} width={56} height={56} />
       <div className="flex flex-col">
         <div className="flex text-slate-400 gap-1">
           <span>{`@${author?.name}`}</span><span>{`• ${dayjs(post.createdAt).fromNow()}`}</span>
@@ -34,13 +37,28 @@ const PostView = (props: PostWithUser) => {
   )
 }
 
-export default function Home() {
-  const user = useUser();
-  console.log(user)
-  const { data, isLoading } = api.posts.getAll.useQuery();
+const Feed = () => {
+  const { data, isLoading: postsLoading } = api.posts.getAll.useQuery();
 
-  if (isLoading) return (<div>Loading...</div>)
-  if (!data) return (<div>Something went wrong...</div>)
+  if (postsLoading) return <LoadingPage />;
+
+  if (!data) return <div>Something went wrong!</div>;
+
+  return (
+    <div className="flex flex-col">
+      {[...data]?.map((fullPost) =>
+        <PostView {...fullPost} key={fullPost.post.id} />
+      )}
+    </div>
+  )
+}
+
+export default function Home() {
+  const { isLoaded: userLoaded, isSignedIn} = useUser();
+  api.posts.getAll.useQuery();
+
+  if (!userLoaded) return <div />
+
   return (
     <>
       <Head>
@@ -49,19 +67,14 @@ export default function Home() {
         <link rel="icon" href="/favicon.ico" />
       </Head>
       <main className="flex justify-center h-screen">
-        <SignOutButton />
         <div className="w-full h-full md:max-w-2xl border-x border-slate-400">
           <div className="border-b border-slate-400 p-4">
-            {!user.isSignedIn && (<div className="flex justify-center">
+            {!isSignedIn && (<div className="flex justify-center">
               <SignInButton />
             </div>)}
-            {user.isSignedIn && <CreatePostWizard />}
+            {isSignedIn && <CreatePostWizard />}
           </div>
-          <div className="flex flex-col">
-            {data.map((fullPost) =>
-              <PostView {...fullPost} key={fullPost.post.id} />
-            )}
-          </div>
+          <Feed />
         </div>
       </main >
     </>

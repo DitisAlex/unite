@@ -17,6 +17,7 @@ export const postsRouter = createTRPCRouter({
   getAll: publicProcedure.query(async ({ ctx }) => {
     const posts = await ctx.db.post.findMany({
       take: 100,
+      orderBy: [{ createdAt: "desc" }],
     });
 
     const users = (
@@ -38,10 +39,23 @@ export const postsRouter = createTRPCRouter({
       return {
         post,
         author: {
-            ...author,
-            name: author.name
+          ...author,
+          name: author.name,
         },
       };
     });
   }),
+
+  create: publicProcedure
+    .input(z.object({ authorId: z.string(), content: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const post = await ctx.db.post.create({
+        data: {
+          authorId: input.authorId,
+          content: input.content,
+        },
+      });
+
+      return post;
+    }),
 });

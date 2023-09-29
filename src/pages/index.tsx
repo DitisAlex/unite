@@ -1,6 +1,7 @@
 import Head from "next/head";
 import Image from "next/image";
 import { SignInButton, SignOutButton, useUser } from "@clerk/nextjs";
+import { useState } from "react";
 
 import { api } from "~/utils/api"
 import type { RouterOutputs } from "~/utils/api"
@@ -12,11 +13,25 @@ dayjs.extend(relativeTime);
 
 const CreatePostWizard = () => {
   const { user } = useUser();
+  const [message, setMessage] = useState("")
+  const { mutate } = api.posts.create.useMutation();
+
+  const postMessage = (id: string) => {
+    mutate({authorId: id, content: message})
+    setMessage("")
+  }
+
   if (!user) return null;
 
   return <div className="flex gap-4 w-full">
     <Image src={user.profileImageUrl} alt="Profile Image" className="w-16 h-16 rounded-full" width={56} height={56} />
-    <input className="bg-transparent grow outline-none" placeholder="Type your message..." />
+    <input
+      type="text"
+      value={message}
+      onChange={(e) => setMessage(e.target.value)}
+      className="bg-transparent grow outline-none" 
+      placeholder="Type your message..." />
+      <button onClick={() => postMessage(user.id)}>Send</button>
   </div>
 }
 
@@ -46,7 +61,7 @@ const Feed = () => {
 
   return (
     <div className="flex flex-col">
-      {[...data]?.map((fullPost) =>
+      {data.map((fullPost) =>
         <PostView {...fullPost} key={fullPost.post.id} />
       )}
     </div>
@@ -54,7 +69,7 @@ const Feed = () => {
 }
 
 export default function Home() {
-  const { isLoaded: userLoaded, isSignedIn} = useUser();
+  const { isLoaded: userLoaded, isSignedIn } = useUser();
   api.posts.getAll.useQuery();
 
   if (!userLoaded) return <div />

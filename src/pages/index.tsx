@@ -14,12 +14,13 @@ dayjs.extend(relativeTime);
 const CreatePostWizard = () => {
   const { user } = useUser();
   const [message, setMessage] = useState("")
-  const { mutate } = api.posts.create.useMutation();
-
-  const postMessage = (id: string) => {
-    mutate({authorId: id, content: message})
-    setMessage("")
-  }
+  const ctx = api.useContext();
+  const { mutate } = api.posts.create.useMutation({
+    onSuccess: () => {
+      setMessage("");
+      void ctx.posts.getAll.invalidate();
+    }
+  });
 
   if (!user) return null;
 
@@ -29,9 +30,10 @@ const CreatePostWizard = () => {
       type="text"
       value={message}
       onChange={(e) => setMessage(e.target.value)}
-      className="bg-transparent grow outline-none" 
+      className="bg-transparent grow outline-none"
       placeholder="Type your message..." />
-      <button onClick={() => postMessage(user.id)}>Send</button>
+    <button onClick={() => mutate({ authorId: user.id, content: message })
+    }>Send</button>
   </div>
 }
 

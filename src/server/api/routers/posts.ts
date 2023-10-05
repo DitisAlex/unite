@@ -27,7 +27,7 @@ export const postsRouter = createTRPCRouter({
           name: input.name,
           email: input.email,
           content: input.content,
-          image: input.email,
+          image: input.image,
         },
       });
 

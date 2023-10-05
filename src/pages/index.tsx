@@ -4,12 +4,13 @@ import { useSession, signIn, signOut } from "next-auth/react";
 import { useState } from "react";
 
 import { api } from "~/utils/api"
-import type { RouterOutputs } from "~/utils/api"
 
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import { LoadingPage } from "~/components/loading";
 dayjs.extend(relativeTime);
+
+
 
 const CreatePostWizard = () => {
   const { data: session } = useSession();
@@ -22,57 +23,38 @@ const CreatePostWizard = () => {
     }
   });
 
-  console.log(session?.user)
-  if (!session?.user) return null;
+  if (!session?.user || !session) return null;
 
   return <div className="flex gap-4 w-full">
-    <Image src={session.user.image} alt="Profile Image" className="w-16 h-16 rounded-full" width={56} height={56} />
+    <Image src={session.user.image ?? "http://goo.gl/vyAs27"} alt="Profile Image" className="w-16 h-16 rounded-full" width={56} height={56} />
     <input
       type="text"
       value={message}
       onChange={(e) => setMessage(e.target.value)}
       className="bg-transparent grow outline-none"
       placeholder="Type your message..." />
-    <button onClick={() => mutate({ name: session.user.name, content: message })
-    }>Send</button>
+    <button disabled={!message.length} onClick={() => mutate({ name: session.user?.name ?? "", content: message, email: session.user?.email ?? "", image: session.user?.image ?? "" })}>Send</button>
   </div>
-}
-
-type PostWithUser = RouterOutputs["posts"]["getAll"][number]
-
-const PostView = (props: PostWithUser) => {
-  return (
-    <div className="flex p-4 border-b border-slate-400 gap-4" key={props.id}>
-      <Image className="w-16 h-16 rounded-full" src={props.image} alt={`@${props.name}'s profile picture`} width={56} height={56} />
-      <div className="flex flex-col">
-        <div className="flex text-slate-400 gap-1">
-          <span>{`@${props?.name}`}</span><span>{`• ${dayjs(props.createdAt).fromNow()}`}</span>
-        </div>
-        <span className="text-2xl">{props.content}</span>
-      </div>
-    </div>
-  )
 }
 
 const Feed = () => {
   const { data, isLoading: postsLoading } = api.posts.getAll.useQuery();
 
   if (postsLoading) return <LoadingPage />;
-  console.log(data)
 
   if (!data) return <div>Something went wrong!</div>;
   return (
     <div className="flex flex-col">
       {data.map((props) =>
-            <div className="flex p-4 border-b border-slate-400 gap-4" key={props.id}>
-            <Image className="w-16 h-16 rounded-full" src={props?.image} alt={`@${props.name}'s profile picture`} width={56} height={56} />
-            <div className="flex flex-col">
-              <div className="flex text-slate-400 gap-1">
-                <span>{`@${props?.name}`}</span><span>{`• ${dayjs(props.createdAt).fromNow()}`}</span>
-              </div>
-              <span className="text-2xl">{props.content}</span>
+        <div className="flex p-4 border-b border-slate-400 gap-4" key={props.id}>
+          <Image className="w-16 h-16 rounded-full" src={props?.image} alt={`@${props.name}'s profile picture`} width={56} height={56} />
+          <div className="flex flex-col">
+            <div className="flex text-slate-400 gap-1">
+              <span>{`@${props?.name}`}</span><span>{`• ${dayjs(props.createdAt).fromNow()}`}</span>
             </div>
+            <span className="text-2xl">{props.content}</span>
           </div>
+        </div>
       )}
     </div>
   )
@@ -81,7 +63,6 @@ const Feed = () => {
 export default function Home() {
   const { data: user } = useSession();
 
-  // if (!userLoaded) return <div />
 
   return (
     <>
@@ -91,17 +72,18 @@ export default function Home() {
         <link rel="icon" href="/favicon.ico" />
       </Head>
       <div className="h-screen">
-      <div className="flex justify-center">
-        <div className="w-full h-full md:max-w-2xl border-x border-slate-400">
-          <div className="border-b border-slate-400 p-4">
-            {!user && (<div className="flex justify-center p-5">
-              <button onClick={() => void signIn("google")}>Sign In</button>
-            </div>)}
-            {user && <CreatePostWizard />}
+
+        <div className="flex justify-center">
+          <div className="w-full h-full md:max-w-2xl border-x border-slate-400">
+            <div className="border-b border-slate-400 p-4">
+              {!user && (<div className="flex justify-center p-5">
+                <button onClick={() => void signIn("google")}>Sign In</button>
+              </div>)}
+              {user && <div><button onClick={() => void signOut()}>Sign Out</button>< CreatePostWizard /> </div>}
+            </div>
+            <Feed />
           </div>
-          <Feed />
-        </div>
-      </div >
+        </div >
       </div>
     </>
   );
